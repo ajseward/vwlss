@@ -32,17 +32,15 @@ public class ScoreSubmit : MonoBehaviour
 		try
 		{
 			Leaderboard.Instance.AddScore(user, score, hash, difficulty);
-			Leaderboard.Instance.GetLeaderboard();
 		}
 		catch (Exception)
 		{
 			// ignored lol
 		}
-
+		
 		uiSwitch.SwitchTo("LeaderboardUI");
 		var diffSwitch = GameObject.Find("DifficultySwitch").GetComponent<UISwitchGroup>();
 		diffSwitch.InitialSwitchableName = difficulty;
-
 	}
 
 	private void Update()

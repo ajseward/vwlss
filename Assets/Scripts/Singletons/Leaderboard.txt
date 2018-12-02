@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using UnityEngine;
+using UnityEngine.Networking;
 using UnityEngine.SocialPlatforms.Impl;
 using UnityEngine.UI;
 
@@ -21,7 +22,12 @@ public class Leaderboard : UnsavedSingleton<Leaderboard>
     private const string PublicKey = "";
 
     public GameObject LeaderboardEntryPrefab;
-    
+
+    private void Start()
+    {
+        StartCoroutine(GetLeaderboard());
+    }
+
     public void AddScore(string user, int score, string hash, string difficulty)
     {
         var hashScore = 0;
@@ -31,10 +37,10 @@ public class Leaderboard : UnsavedSingleton<Leaderboard>
             hashScore += c;
         }
 
-        SubmitEntry(user, score, hashScore, hash, difficulty);
+        StartCoroutine(SubmitEntry(user, score, hashScore, hash, difficulty));
     }
 
-    private void SubmitEntry(string user, int score, int hashScore, string hash, string difficulty)
+    private IEnumerator SubmitEntry(string user, int score, int hashScore, string hash, string difficulty)
     {
         var testScore = 0;
 
@@ -44,27 +50,32 @@ public class Leaderboard : UnsavedSingleton<Leaderboard>
         }
 
         if (hashScore != testScore)
-            return;
+            yield break;
 
         if (score != hash.Length)
-            return;
+           yield break;
 
         if (user.Length > GameSettings.Instance.MaxNameLength)
-            return;
-        
-        var req = (HttpWebRequest) WebRequest.Create(
-            $"http://dreamlo.com/lb/{PrivateKey}/add/{user}|{difficulty}/{score}/{hashScore}/{hash}");
+            yield break;
 
-        req.GetResponse();
+
+        var www = UnityWebRequest.Get($"http://dreamlo.com/lb/{PrivateKey}/add/{user}|{difficulty}/{score}/{hashScore}/{hash}");
+        yield return www.SendWebRequest();
     }
 
-    public void GetLeaderboard()
+    public IEnumerator GetLeaderboard()
     {
-        var req = (HttpWebRequest) WebRequest.Create(
-            $"http://dreamlo.com/lb/{PublicKey}/pipe");
+        Debug.Log("Requesting LB");
+        var www = UnityWebRequest.Get($"http://dreamlo.com/lb/{PublicKey}/pipe");
+        yield return www.SendWebRequest();
 
-        var response = (HttpWebResponse)req.GetResponse();
-        var responseString = new StreamReader(response.GetResponseStream()).ReadToEnd();
+        if (www.isNetworkError || www.isHttpError)
+        {
+            Debug.Log(www.error);
+        }
+        var responseString = www.downloadHandler.text;
+        
+        Debug.Log(responseString);
 
         var entries = responseString.Split('\n');
 
@@ -118,12 +129,11 @@ public class Leaderboard : UnsavedSingleton<Leaderboard>
         }
     }
 
-    private void DeleteEntry(LeaderboardEntry entry)
+    private IEnumerator DeleteEntry(LeaderboardEntry entry)
     {
-        var req = (HttpWebRequest) WebRequest.Create(
-            $"http://dreamlo.com/lb/{PrivateKey}/delete/{entry.Name}");
+        var www = UnityWebRequest.Get($"http://dreamlo.com/lb/{PrivateKey}/delete/{entry.Name}");
 
-        req.GetResponse();
+        yield return www.SendWebRequest();
         
         Destroy(entry.gameObject);
     }
