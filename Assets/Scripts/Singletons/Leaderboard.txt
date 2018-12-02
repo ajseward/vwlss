@@ -1,0 +1,130 @@
+﻿using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.IO;
+using System.Net;
+using UnityEngine;
+using UnityEngine.SocialPlatforms.Impl;
+using UnityEngine.UI;
+
+// http://dreamlo.com/lb/{_privateKey}/add/{Name}/{RealScore}/{HashScore}/{Hash}
+
+public class Leaderboard : UnsavedSingleton<Leaderboard>
+{
+    
+    public RectTransform EasyLeaderboard;
+    public RectTransform MediumLeaderboard;
+    public RectTransform HardLeaderboard;
+    public RectTransform InsaneLeaderboard;
+
+    private const string PrivateKey = "";
+    private const string PublicKey = "";
+
+    public GameObject LeaderboardEntryPrefab;
+    
+    public void AddScore(string user, int score, string hash, string difficulty)
+    {
+        var hashScore = 0;
+
+        foreach (var c in hash)
+        {
+            hashScore += c;
+        }
+
+        SubmitEntry(user, score, hashScore, hash, difficulty);
+    }
+
+    private void SubmitEntry(string user, int score, int hashScore, string hash, string difficulty)
+    {
+        var testScore = 0;
+
+        foreach (var c in hash)
+        {
+            testScore += c;
+        }
+
+        if (hashScore != testScore)
+            return;
+
+        if (score != hash.Length)
+            return;
+
+        if (user.Length > GameSettings.Instance.MaxNameLength)
+            return;
+        
+        var req = (HttpWebRequest) WebRequest.Create(
+            $"http://dreamlo.com/lb/{PrivateKey}/add/{user}|{difficulty}/{score}/{hashScore}/{hash}");
+
+        req.GetResponse();
+    }
+
+    public void GetLeaderboard()
+    {
+        var req = (HttpWebRequest) WebRequest.Create(
+            $"http://dreamlo.com/lb/{PublicKey}/pipe");
+
+        var response = (HttpWebResponse)req.GetResponse();
+        var responseString = new StreamReader(response.GetResponseStream()).ReadToEnd();
+
+        var entries = responseString.Split('\n');
+
+        foreach (var entry in entries)
+        {
+            if (string.IsNullOrEmpty(entry))
+                continue;
+            
+            var entryValues = entry.Split('|');
+
+            RectTransform targetBoard;
+            
+            print(entry);
+            switch (entryValues[1])
+            {
+                case "Easy":
+                    targetBoard = EasyLeaderboard;
+                    break;
+                
+                case "Medium":
+                    targetBoard = MediumLeaderboard;
+                    break;
+                
+                case "Hard":
+                    targetBoard = HardLeaderboard;
+                    break;
+                
+                case "Insane":
+                    targetBoard = InsaneLeaderboard;
+                    break;
+                
+                case "Full":
+                    continue;
+                
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
+
+            var newEntry = Instantiate(LeaderboardEntryPrefab, targetBoard, false).GetComponent<LeaderboardEntry>();
+
+            newEntry.Name = entryValues[0];
+            newEntry.Difficulty = entryValues[1];
+            newEntry.Score = int.Parse(entryValues[2]);
+            newEntry.HashScore = int.Parse(entryValues[3]);
+            newEntry.Hash = entryValues[4];
+
+            if (!newEntry.Verify())
+            {
+                DeleteEntry(newEntry);
+            }
+        }
+    }
+
+    private void DeleteEntry(LeaderboardEntry entry)
+    {
+        var req = (HttpWebRequest) WebRequest.Create(
+            $"http://dreamlo.com/lb/{PrivateKey}/delete/{entry.Name}");
+
+        req.GetResponse();
+        
+        Destroy(entry.gameObject);
+    }
+}

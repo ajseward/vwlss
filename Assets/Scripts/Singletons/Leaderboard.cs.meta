@@ -1,0 +1,17 @@
+fileFormatVersion: 2
+guid: c0227bd937486314e88b8bf12b97c349
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences:
+  - EasyLeaderboard: {instanceID: 0}
+  - MediumLeaderboard: {instanceID: 0}
+  - HardLeaderboard: {instanceID: 0}
+  - InsaneLeaderboard: {instanceID: 0}
+  - LeaderboardEntryPrefab: {fileID: 1687772727602712, guid: 32ae15f2086fee44e9c47a99664d0b03,
+      type: 2}
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
